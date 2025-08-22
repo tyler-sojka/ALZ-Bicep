@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "parTopLevelManagementGroupPrefix": {
+      "value": "Lee"
+    },
+    "parLogAnalyticsWorkspaceResourceId": {
+      "value": "/subscriptions/89e2c1d6-3f1d-45d1-8ddf-d8ea6cab925e/resourceGroups/loganalytics-leecompany-group/providers/Microsoft.OperationalInsights/workspaces/Lee-LogAnalytics"
+    },
+    "parDdosProtectionPlanId": {
+      "value": ""
+    },
+    "parTelemetryOptOut": {
+      "value": false
+    }
+  }
+}

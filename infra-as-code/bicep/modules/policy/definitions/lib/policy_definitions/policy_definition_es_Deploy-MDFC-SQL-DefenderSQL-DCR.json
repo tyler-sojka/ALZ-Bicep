@@ -213,7 +213,7 @@
                     "condition": "[empty(parameters('dcrResourceGroup'))]",
                     "type": "Microsoft.Resources/resourceGroups",
                     "name": "[variables('defaultRGName')]",
-                    "apiVersion": "2022-09-01",
+                    "apiVersion": "2023-04-01",
                     "location": "[variables('defaultRGLocation')]",
                     "tags": {
                       "createdBy": "MicrosoftDefenderForSQL"
@@ -222,7 +222,7 @@
                   {
                     "type": "Microsoft.Resources/deployments",
                     "name": "[variables('deployDefenderForSQL')]",
-                    "apiVersion": "2022-09-01",
+                    "apiVersion": "2023-04-01",
                     "resourceGroup": "[parameters('resourceGroup')]",
                     "properties": {
                       "mode": "Incremental",
@@ -274,7 +274,7 @@
                     "condition": "[empty(parameters('dcrId'))]",
                     "type": "Microsoft.Resources/deployments",
                     "name": "[variables('deployDataCollectionRules')]",
-                    "apiVersion": "2022-09-01",
+                    "apiVersion": "2023-04-01",
                     "resourceGroup": "[variables('defaultRGName')]",
                     "dependsOn": [
                       "[variables('defaultRGName')]"
@@ -382,7 +382,7 @@
                   {
                     "type": "Microsoft.Resources/deployments",
                     "name": "[variables('deployDataCollectionRulesAssociation')]",
-                    "apiVersion": "2022-09-01",
+                    "apiVersion": "2023-04-01",
                     "resourceGroup": "[parameters('resourceGroup')]",
                     "dependsOn": [
                       "[variables('deployDataCollectionRules')]"

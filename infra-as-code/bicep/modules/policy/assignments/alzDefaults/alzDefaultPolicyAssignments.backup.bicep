@@ -2,9 +2,16 @@ metadata name = 'ALZ Bicep - Default Policy Assignments'
 metadata description = 'Assigns ALZ Default Policies to the Management Group hierarchy'
 
 @description('Prefix for management group hierarchy.')
-@minLength(2)  // Comment out or remove
-@maxLength(10) // Comment out or remove
-param parTopLevelManagementGroupPrefix string = 'Lee'
+@minLength(2)
+@maxLength(10)
+param parTopLevelManagementGroupPrefix string = 'alz'
+
+@description('Optional suffix for management group names/IDs.')
+@maxLength(10)
+param parTopLevelManagementGroupSuffix string = ''
+
+@description('Apply platform policies to Platform group or child groups.')
+param parPlatformMgAlzDefaultsEnable bool = true
 
 @description('Assign policies to Corp & Online Management Groups under Landing Zones.')
 param parLandingZoneChildrenMgAlzDefaultsEnable bool = true
@@ -37,7 +44,7 @@ param parUserAssignedManagedIdentityResourceId string = ''
 param parLogAnalyticsWorkspaceLogRetentionInDays string = '365'
 
 @description('Name of the Automation Account.')
-param parAutomationAccountName string = 'lee-automation-account'
+param parAutomationAccountName string = 'alz-automation-account'
 
 @description('Email address for Microsoft Defender for Cloud alerts.')
 param parMsDefenderForCloudEmailSecurityContact string = ''
@@ -81,7 +88,7 @@ var varLogAnalyticsWorkspaceResourceGroupName = split(parLogAnalyticsWorkspaceRe
 
 var varLogAnalyticsWorkspaceSubscription = split(parLogAnalyticsWorkspaceResourceId, '/')[2]
 
-var varUserAssignedManagedIdentityResourceName = 'lee-policy-remediation-umi'
+var varUserAssignedManagedIdentityResourceName = split(parUserAssignedManagedIdentityResourceId, '/')[8]
 
 // Customer Usage Attribution Id Telemetry
 var varCuaid = '98cef979-5a6b-403b-83c7-10c8f04ac9a2'
@@ -445,18 +452,18 @@ var varRbacRoleDefinitionIds = {
 
 // Management Groups Variables - Used For Policy Assignments
 var varManagementGroupIds = {
-  intRoot: 'LeeCompany-MG'
-  platform: 'Platform-MG'
-  platformManagement: 'Management-MG'
-  platformConnectivity: 'Connectivity-MG'
-  platformIdentity: 'IdentityOps-MG'  // Your IdentityOps MG under Core
-  landingZones: 'LandingZones-MG'
-  landingZonesOnline: 'Apps-MG'
-  landingZonesCorp: 'Core-MG'
-  // landingZonesConfidentialCorp: ''
-  // landingZonesConfidentialOnline: ''
-  decommissioned: 'Decommissioned-MG'
-  sandbox: 'Sandbox-MG'
+  intRoot: '${parTopLevelManagementGroupPrefix}${parTopLevelManagementGroupSuffix}'
+  platform: '${parTopLevelManagementGroupPrefix}-platform${parTopLevelManagementGroupSuffix}'
+  platformManagement: parPlatformMgAlzDefaultsEnable ? '${parTopLevelManagementGroupPrefix}-platform-management${parTopLevelManagementGroupSuffix}' : '${parTopLevelManagementGroupPrefix}-platform${parTopLevelManagementGroupSuffix}'
+  platformConnectivity: parPlatformMgAlzDefaultsEnable ? '${parTopLevelManagementGroupPrefix}-platform-connectivity${parTopLevelManagementGroupSuffix}' : '${parTopLevelManagementGroupPrefix}-platform${parTopLevelManagementGroupSuffix}'
+  platformIdentity: parPlatformMgAlzDefaultsEnable ? '${parTopLevelManagementGroupPrefix}-platform-identity${parTopLevelManagementGroupSuffix}' : '${parTopLevelManagementGroupPrefix}-platform${parTopLevelManagementGroupSuffix}'
+  landingZones: '${parTopLevelManagementGroupPrefix}-landingzones${parTopLevelManagementGroupSuffix}'
+  landingZonesCorp: '${parTopLevelManagementGroupPrefix}-landingzones-corp${parTopLevelManagementGroupSuffix}'
+  landingZonesOnline: '${parTopLevelManagementGroupPrefix}-landingzones-online${parTopLevelManagementGroupSuffix}'
+  landingZonesConfidentialCorp: '${parTopLevelManagementGroupPrefix}-landingzones-confidential-corp${parTopLevelManagementGroupSuffix}'
+  landingZonesConfidentialOnline: '${parTopLevelManagementGroupPrefix}-landingzones-confidential-online${parTopLevelManagementGroupSuffix}'
+  decommissioned: '${parTopLevelManagementGroupPrefix}-decommissioned${parTopLevelManagementGroupSuffix}'
+  sandbox: '${parTopLevelManagementGroupPrefix}-sandbox${parTopLevelManagementGroupSuffix}'
 }
 
 type typManagementGroupIdOverrides = {
@@ -468,8 +475,8 @@ type typManagementGroupIdOverrides = {
   landingZones: string?
   landingZonesCorp: string?
   landingZonesOnline: string?
-  // landingZonesConfidentialCorp: string?
-  // landingZonesConfidentialOnline: string?
+  landingZonesConfidentialCorp: string?
+  landingZonesConfidentialOnline: string?
   decommissioned: string?
   sandbox: string?
 }
@@ -629,7 +636,6 @@ var varPrivateDnsZonesFinalResourceIds = {
   azureWebPrivateDnsZoneId: '${varPrivateDnsZonesBaseResourceId}privatelink.webpubsub.azure.com'
 }
 
-
 // **Scope**
 targetScope = 'managementGroup'
 
@@ -649,7 +655,7 @@ module modCustomerUsageAttributionZtnP1 '../../../../CRML/customerUsageAttributi
 // Modules - Policy Assignments - Intermediate Root Management Group
 // Module - Policy Assignment - Deploy-MDFC-Config-H224
 module modPolAssiIntRootDeployMdfcConfig '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployMDFCConfig.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployMdfcConfig
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployMDFCConfig.definitionId
@@ -679,7 +685,7 @@ module modPolAssiIntRootDeployMdfcConfig '../../../policy/assignments/policyAssi
 
 // Module - Policy Assignment - Deploy-MDEndpoints
 module modPolAssiIntRootDeployMDEndpoints '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployMDEndpoints.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployMDEnpoints
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployMDEndpoints.definitionId
@@ -699,7 +705,7 @@ module modPolAssiIntRootDeployMDEndpoints '../../../policy/assignments/policyAss
 
 // Module - Policy Assignment - Deploy-MDEndpointsAMA
 module modPolAssiIntRootDeployMDEndpointsAMA '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployMDEndpointsAma.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployMDEnpointsAma
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployMDEndpointsAma.definitionId
@@ -719,7 +725,7 @@ module modPolAssiIntRootDeployMDEndpointsAMA '../../../policy/assignments/policy
 
 // Module - Policy Assignment - Deploy-AzActivity-Log
 module modPolAssiIntRootDeployAzActivityLog '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployAzActivityLog.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployAzActivityLog
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployAzActivityLog.definitionId
@@ -745,7 +751,7 @@ module modPolAssiIntRootDeployAzActivityLog '../../../policy/assignments/policyA
 
 // Module - Policy Assignment - Deploy-ASC-Monitoring
 module modPolAssiIntRootDeployAscMonitoring '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployASCMonitoring.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployAscMonitoring
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployASCMonitoring.definitionId
@@ -761,7 +767,7 @@ module modPolAssiIntRootDeployAscMonitoring '../../../policy/assignments/policyA
 
 // Module - Policy Assignment - Deploy-Diag-Logs
 module modPolAssiIntRootDeployResourceDiag '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployResourceDiag.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployResourceDiag
   params: {
     parPolicyAssignmentDefinitionId: parLogAnalyticsWorkspaceResourceCategory =~ 'allLogs' ? varPolicyAssignmentDeployResourceDiag.definitionId : varPolicyAssignmentDeployResourceDiag.conditionalDefinitionId
@@ -787,7 +793,7 @@ module modPolAssiIntRootDeployResourceDiag '../../../policy/assignments/policyAs
 
 // Module - Policy Assignment - Enforce-ACSB
 module modPolAssiIntRootEnforceAcsb '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentEnforceACSB.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootEnforceAcsb
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentEnforceACSB.definitionId
@@ -806,7 +812,7 @@ module modPolAssiIntRootEnforceAcsb '../../../policy/assignments/policyAssignmen
 
 // Module - Policy Assignment - Deploy-MDFC-OssDb
 module modPolAssiIntRootDeployMdfcOssDb '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployMDFCOssDb.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployMdfcOssDb
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployMDFCOssDb.definitionId
@@ -826,7 +832,7 @@ module modPolAssiIntRootDeployMdfcOssDb '../../../policy/assignments/policyAssig
 
 // Module - Policy Assignment - Deploy-MDFC-SqlAtp
 module modPolAssiIntRootDeployMdfcSqlAtp '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDeployMDFCSqlAtp.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDeployMdfcSqlAtp
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDeployMDFCSqlAtp.definitionId
@@ -846,7 +852,7 @@ module modPolAssiIntRootDeployMdfcSqlAtp '../../../policy/assignments/policyAssi
 
 // Module - Policy Assignment - Audit Location Match
 module modPolAssiIntRootAuditLocationMatch '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentAuditLocationMatch.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootAuditLocationMatch
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentAuditLocationMatch.definitionId
@@ -863,7 +869,7 @@ module modPolAssiIntRootAuditLocationMatch '../../../policy/assignments/policyAs
 
 // Module - Policy Assignment - Audit Zone Resiliency
 module modPolAssiIntRootAuditZoneResiliency '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentAuditZoneResiliency.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootAuditZoneResiliency
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentAuditZoneResiliency.definitionId
@@ -880,7 +886,7 @@ module modPolAssiIntRootAuditZoneResiliency '../../../policy/assignments/policyA
 
 // Module - Policy Assignment - Audit-UnusedResources
 module modPolAssiIntRootAuditUnusedRes '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentAuditUnusedResources.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootAuditUnusedRes
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentAuditUnusedResources.definitionId
@@ -896,7 +902,7 @@ module modPolAssiIntRootAuditUnusedRes '../../../policy/assignments/policyAssign
 
 // Module - Policy Assignment - Audit Trusted Launch
 module modPolAssiIntRootAuditTrustedLaunch '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentAuditTrustedLaunch.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootAuditTrustedLaunch
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentAuditTrustedLaunch.definitionId
@@ -912,7 +918,7 @@ module modPolAssiIntRootAuditTrustedLaunch '../../../policy/assignments/policyAs
 
 // Module - Policy Assignment - Deny-UnmanagedDisk
 module modPolAssiIntRootDenyUnmanagedDisks '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDenyUnmanagedDisk.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDenyUnmanagedDisks
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDenyUnmanagedDisk.definitionId
@@ -930,7 +936,7 @@ module modPolAssiIntRootDenyUnmanagedDisks '../../../policy/assignments/policyAs
 
 // Module - Policy Assignment - Deny-Classic-Resources
 module modPolAssiIntRootDenyClassicRes '../../../policy/assignments/policyAssignmentManagementGroup.bicep' = if (!contains(parExcludedPolicyAssignments, varPolicyAssignmentDenyClassicResources.libDefinition.name)) {
-  scope: managementGroup(varManagementGroupIds.intRoot)
+  scope: managementGroup(varManagementGroupIdsUnioned.intRoot)
   name: varModDepNames.modPolAssiIntRootDenyClassicRes
   params: {
     parPolicyAssignmentDefinitionId: varPolicyAssignmentDenyClassicResources.definitionId
