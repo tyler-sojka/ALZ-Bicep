@@ -484,7 +484,7 @@ var varManagementGroupIdsUnioned = union(
 
 var varCorpManagementGroupIds = [
   varManagementGroupIdsUnioned.landingZonesCorp
-  varManagementGroupIdsUnioned.landingZonesConfidentialCorp
+  // varManagementGroupIdsUnioned.landingZonesConfidentialCorp
 ]
 
 var varCorpManagementGroupIdsFiltered = parLandingZoneMgConfidentialEnable ? varCorpManagementGroupIds : filter(varCorpManagementGroupIds, mg => !contains(toLower(mg), 'confidential'))
